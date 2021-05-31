@@ -10,6 +10,8 @@
   with:
     # Default: ${{ github.token }}
     token: ${{ secrets.GITHUB_TOKEN }}
+    # Default: ''
+    packageNamespace: '@namespace'
 ```
 
 ## license
