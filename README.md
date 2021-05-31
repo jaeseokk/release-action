@@ -5,7 +5,7 @@
 ## Example Usage
 
 ```yml
-- name: create a gif
+- name: Create release
   uses: jaeseokk/release-action@main
   with:
     # Default: ${{ github.token }}
