@@ -35,7 +35,7 @@ export const bumpPackages = async (
       `yarn workspace ${packageNamespaceWithSlash}${packageName} config set version-tag-prefix "${packageName}-"`,
     );
     await exec(
-      `yarn workspace ${packageNamespaceWithSlash}${packageName} config set version-git-message "${packageName}-%s"`,
+      `yarn workspace ${packageNamespaceWithSlash}${packageName} config set version-git-message "[release] ${packageName}-%s"`,
     );
     await exec(
       `yarn workspace ${packageNamespaceWithSlash}${packageName} version --new-version 1.${minor}.${nextPatch}`,
