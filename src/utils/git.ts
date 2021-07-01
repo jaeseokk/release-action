@@ -2,12 +2,12 @@ import {exec} from '../utils/exec';
 import {GitTag, Package} from '../types';
 
 export const setupUser = async () => {
-  await exec('git', ['config', '--global', 'user.name', `"github-actions[bot]"`]);
+  await exec('git', ['config', '--global', 'user.name', `"hb-release[bot]"`]);
   await exec('git', [
     'config',
     '--global',
     'user.email',
-    `"github-actions[bot]@users.noreply.github.com"`,
+    `"hb-release[bot]@users.noreply.github.com"`,
   ]);
 };
 
