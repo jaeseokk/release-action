@@ -1,5 +1,6 @@
 import {exec} from '../utils/exec';
 import {GitTag, Package} from '../types';
+import {dedup, filterExistingPackages} from '.';
 
 export const setupUser = async () => {
   await exec('git', ['config', '--global', 'user.name', `"github-actions[bot]"`]);
@@ -27,17 +28,18 @@ export const fetchTags = async () => {
 export const getChangePackages = async (): Promise<Package[]> => {
   const lastTag = await exec(`git describe --tags --abbrev=0`);
   const changedFiles = (await exec(`git diff ${lastTag.trim()} HEAD --name-only`)).split('\n');
+  const changedPackages = dedup(
+    changedFiles
+      .filter((path) => path.indexOf('packages/') === 0)
+      .map((path) => {
+        const matches = path.match(/^packages\/([^\/]+)\//);
+        return matches?.[1] || '';
+      }),
+  );
 
-  return [
-    ...new Set(
-      changedFiles
-        .filter((path) => path.indexOf('packages/') === 0)
-        .map((path) => {
-          const matches = path.match(/^packages\/([^\/]+)\//);
-          return matches?.[1] || '';
-        }),
-    ),
-  ];
+  const existingChangedPackages = await filterExistingPackages(changedPackages);
+
+  return existingChangedPackages;
 };
 
 export const getSortedGitTags = async (): Promise<GitTag[]> => {

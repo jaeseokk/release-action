@@ -1,6 +1,17 @@
 import {exec} from './exec';
 import {GitTag, Package} from '../types';
 
+export const dedup = <T>(collection: T[]) => {
+  return [...new Set(collection)];
+};
+
+export const filterExistingPackages = async (packages: Package[]) => {
+  const workspacesInfoJson = JSON.parse(JSON.parse(await exec(`yarn --json workspaces info`)).data);
+  const existingPackages = Object.keys(workspacesInfoJson);
+
+  return packages.filter((packageName) => existingPackages.includes(`@hb/${packageName}`));
+};
+
 export const getMinorPartOfVersion = (): string => {
   const nowLocaleString = new Date().toLocaleString('en-US', {timeZone: 'Asia/Seoul'});
   const now = new Date(nowLocaleString);
