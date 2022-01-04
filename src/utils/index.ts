@@ -1,15 +1,18 @@
-import {exec} from './exec';
+import path from 'path';
+import fs from 'fs';
 import {GitTag, Package} from '../types';
+import {commitVersion, tagVersion} from './git';
+import {exec} from '@actions/exec';
 
 export const dedup = <T>(collection: T[]) => {
   return [...new Set(collection)];
 };
 
 export const filterExistingPackages = async (packages: Package[]) => {
-  const workspacesInfoJson = JSON.parse(JSON.parse(await exec(`yarn --json workspaces info`)).data);
-  const existingPackages = Object.keys(workspacesInfoJson);
-
-  return packages.filter((packageName) => existingPackages.includes(`@hb/${packageName}`));
+  return packages.filter(
+    (packageName) =>
+      packageName && fs.existsSync(path.join(process.cwd(), 'packages', packageName)),
+  );
 };
 
 export const getMinorPartOfVersion = (): string => {
@@ -22,11 +25,34 @@ export const getMinorPartOfVersion = (): string => {
   return `${year}${month}${date}`;
 };
 
+export const findPackageJson = (packageName: Package) => {
+  const packageJsonPath = path.join(process.cwd(), 'packages', packageName, 'package.json');
+
+  if (!fs.existsSync(packageJsonPath)) {
+    throw new Error('Could not find package.json');
+  }
+
+  return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+};
+
+export const updateVersionOfPackageJson = async (packageName: string, version: string) => {
+  const packageJsonPath = path.join(process.cwd(), 'packages', packageName, 'package.json');
+  const packageJson = findPackageJson(packageName);
+
+  const nextPakcageJson = {
+    ...packageJson,
+    version,
+  };
+
+  fs.writeFileSync(packageJsonPath, JSON.stringify(nextPakcageJson, null, 2) + '\n');
+
+  await exec(`cat ${packageJsonPath}`);
+};
+
 export const bumpPackages = async (
   changedPackages: Package[],
   gitTags: GitTag[],
   minor: string,
-  {packageNamespace = ''}: {packageNamespace?: string} = {},
 ) => {
   const tags = [];
 
@@ -39,20 +65,13 @@ export const bumpPackages = async (
         : 0;
     const prefix = `${packageName}-`;
     const version = `1.${minor}.${nextPatch}`;
-    const tag = `${prefix}${version}`;
-    const packageNamespaceWithSlash = packageNamespace ? `${packageNamespace}/` : '';
+    const versionWithPackage = `${prefix}${version}`;
 
-    await exec(
-      `yarn workspace ${packageNamespaceWithSlash}${packageName} config set version-tag-prefix "${packageName}-"`,
-    );
-    await exec(
-      `yarn workspace ${packageNamespaceWithSlash}${packageName} config set version-git-message "[release] ${packageName}-%s"`,
-    );
-    await exec(
-      `yarn workspace ${packageNamespaceWithSlash}${packageName} version --new-version 1.${minor}.${nextPatch}`,
-    );
+    await updateVersionOfPackageJson(packageName, version);
+    await commitVersion(packageName, version);
+    await tagVersion(packageName, version);
 
-    tags.push(tag);
+    tags.push(versionWithPackage);
   }
 
   return tags;

@@ -15,7 +15,6 @@ const run = async () => {
   const githubToken = core.getInput('token', {required: true});
   const githubRepositoryPath = process.env.GITHUB_REPOSITORY;
   const triggerCommitSha = process.env.GITHUB_SHA;
-  const packageNamespace = core.getInput('packageNamespace');
 
   if (!githubRepositoryPath) {
     core.setFailed('Unavailable github repo path.');
@@ -42,9 +41,7 @@ const run = async () => {
 
   const gitTags = await getSortedGitTags();
   const minor = getMinorPartOfVersion();
-  const tags = await bumpPackages(changedPackages, gitTags, minor, {
-    packageNamespace,
-  });
+  const tags = await bumpPackages(changedPackages, gitTags, minor);
 
   console.log(`New tags: ${tags}`);
 
@@ -64,7 +61,7 @@ const run = async () => {
 
 try {
   run();
-} catch (e) {
+} catch (e: any) {
   console.error(e);
   core.setFailed(e.message);
 }

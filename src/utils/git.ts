@@ -34,7 +34,8 @@ export const getChangePackages = async (): Promise<Package[]> => {
       .map((path) => {
         const matches = path.match(/^packages\/([^\/]+)\//);
         return matches?.[1] || '';
-      }),
+      })
+      .filter((packageName) => packageName),
   );
 
   const existingChangedPackages = await filterExistingPackages(changedPackages);
@@ -56,6 +57,15 @@ export const getSortedGitTags = async (): Promise<GitTag[]> => {
 
     return 0;
   });
+};
+
+export const commitVersion = async (packageName: string, version: string) => {
+  await exec(`git add packages/*/package.json`);
+  await exec(`git commit -m "${packageName}-${version}"`);
+};
+
+export const tagVersion = async (packageName: string, version: string) => {
+  await exec(`git tag "${packageName}-${version}"`);
 };
 
 export const pushCommitWithTags = async () => {
