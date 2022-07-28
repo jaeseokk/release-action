@@ -1,6 +1,7 @@
 import {exec} from '../utils/exec';
-import {GitTag, Package} from '../types';
+import {GitTag, MergeCommitInfo, Package} from '../types';
 import {dedup, filterExistingPackages} from '.';
+import {MERGE_PULL_COMMIT_REGEX} from '../constants';
 
 export const setupUser = async () => {
   await exec('git', ['config', '--global', 'user.name', `"github-actions[bot]"`]);
@@ -70,4 +71,23 @@ export const tagVersion = async (packageName: string, version: string) => {
 
 export const pushCommitWithTags = async () => {
   await exec(`git push --follow-tags`);
+};
+
+export const getMergeCommitInfo = (commitMessage: string): MergeCommitInfo | null => {
+  const match = commitMessage.match(MERGE_PULL_COMMIT_REGEX);
+
+  if (!match) {
+    return null;
+  }
+
+  const pullNumber = match[1];
+
+  if (!pullNumber) {
+    return null;
+  }
+
+  return {
+    commitMessage,
+    pullNumber: Number(pullNumber),
+  };
 };

@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
-import {bumpPackages, getMinorPartOfVersion} from './utils';
+import {context} from './context';
+import {bumpPackages, getMinorPartOfVersion, getReleaseNote} from './utils';
 import {
   fetchTags,
   getChangePackages,
@@ -10,11 +10,15 @@ import {
   setupUser,
 } from './utils/git';
 import {createRelease} from './utils/github';
+import {notifyRelease} from './utils/slack';
 
 const run = async () => {
   const githubToken = core.getInput('token', {required: true});
   const githubRepositoryPath = process.env.GITHUB_REPOSITORY;
   const triggerCommitSha = process.env.GITHUB_SHA;
+  const slackToken = core.getInput('slackToken');
+  const lastCommitMessage = core.getInput('lastCommitMessage', {required: true});
+  const slackChannel = core.getInput('slackChannel');
 
   if (!githubRepositoryPath) {
     core.setFailed('Unavailable github repo path.');
@@ -29,7 +33,9 @@ const run = async () => {
   core.setOutput('released', 'false');
   core.setOutput('releasedTags', '[]');
 
-  const octokit = github.getOctokit(githubToken);
+  context.create({
+    githubToken,
+  });
 
   await setupUser();
   await setupRemote(githubToken, githubRepositoryPath);
@@ -41,22 +47,30 @@ const run = async () => {
 
   const gitTags = await getSortedGitTags();
   const minor = getMinorPartOfVersion();
-  const tags = await bumpPackages(changedPackages, gitTags, minor);
+  const bumpedPackageInfoList = await bumpPackages(changedPackages, gitTags, minor);
 
-  console.log(`New tags: ${tags}`);
+  console.log(`New tags: ${bumpedPackageInfoList.map((packageInfo) => packageInfo.tag)}`);
 
-  if (tags.length === 0) {
+  if (bumpedPackageInfoList.length === 0) {
     return;
   }
 
   await pushCommitWithTags();
 
-  tags.forEach((tag) => {
-    createRelease(octokit, {tagName: tag});
+  const releaseNote = await getReleaseNote(lastCommitMessage);
+
+  console.log(`Release Note: ${releaseNote}`);
+
+  bumpedPackageInfoList.forEach((packageInfo) => {
+    createRelease({tagName: packageInfo.tag, releaseNote});
   });
 
+  if (slackToken && slackChannel) {
+    await notifyRelease(slackToken, slackChannel, bumpedPackageInfoList, releaseNote || '');
+  }
+
   core.setOutput('released', 'true');
-  core.setOutput('releasedTags', JSON.stringify(tags));
+  core.setOutput('releasedTags', JSON.stringify(bumpedPackageInfoList));
 };
 
 try {

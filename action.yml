@@ -14,6 +14,16 @@ inputs:
     description: >
       A string value that is namespace of package
     default: ''
+  lastCommitMessage:
+    description: >
+      Last commit message
+    default: ${{ github.event.head_commit.message }}
+  slackToken:
+    description: >
+      Slack token
+  slackChannel:
+    description: >
+      Slack channel
 outputs:
   released:
     description: >

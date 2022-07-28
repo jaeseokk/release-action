@@ -1,8 +1,11 @@
 import path from 'path';
 import fs from 'fs';
-import {GitTag, Package} from '../types';
-import {commitVersion, tagVersion} from './git';
+import {BumpedPackageInfo, GitTag, Package} from '../types';
+import {commitVersion, getMergeCommitInfo, tagVersion} from './git';
 import {exec} from '@actions/exec';
+import {getPullRequest} from './github';
+import {context} from '../context';
+import {MD_COMMENT_REGEX, MD_RELEASE_NOTE_SECTION_REGEX} from '../constants';
 
 export const dedup = <T>(collection: T[]) => {
   return [...new Set(collection)];
@@ -53,8 +56,8 @@ export const bumpPackages = async (
   changedPackages: Package[],
   gitTags: GitTag[],
   minor: string,
-) => {
-  const tags = [];
+): Promise<BumpedPackageInfo[]> => {
+  const bumpedPackageInfoList = [];
 
   for (const packageName of changedPackages) {
     const prevVersion = gitTags.find((tag) => tag.indexOf(`${packageName}-1.${minor}`) === 0);
@@ -71,8 +74,56 @@ export const bumpPackages = async (
     await commitVersion(packageName, version);
     await tagVersion(packageName, version);
 
-    tags.push(versionWithPackage);
+    bumpedPackageInfoList.push({
+      packageName,
+      version,
+      tag: versionWithPackage,
+    });
   }
 
-  return tags;
+  return bumpedPackageInfoList;
+};
+
+export const extractReleaseNoteFromPullRequestBody = (pullRequestBody: string) => {
+  console.log(pullRequestBody);
+
+  const match = pullRequestBody.match(MD_RELEASE_NOTE_SECTION_REGEX);
+
+  console.log('match', match);
+
+  if (!match) {
+    return '';
+  }
+
+  const releaseNote = (match[2] || '').replace(MD_COMMENT_REGEX, '').trim();
+
+  return releaseNote;
+};
+
+export const getReleaseNote = async (lastCommitMessage: string) => {
+  /**
+   * 1. check merge commit
+   * 2.1 if no, return null
+   * 2.2 if yes, get pull numbmer
+   * 3. get pull request body
+   * 4. get release note section and retrun it
+   */
+
+  if (!context.octokit) {
+    throw 'context error';
+  }
+
+  const mergeCommitInfo = getMergeCommitInfo(lastCommitMessage);
+
+  console.log('mergeCommitInfo', mergeCommitInfo);
+
+  if (!mergeCommitInfo) {
+    return undefined;
+  }
+
+  const pullNumber = mergeCommitInfo.pullNumber;
+  const pullRequestInfo = await getPullRequest({pullNumber});
+  const releaseNote = extractReleaseNoteFromPullRequestBody(pullRequestInfo.data.body || '');
+
+  return releaseNote || pullRequestInfo.data.title;
 };
