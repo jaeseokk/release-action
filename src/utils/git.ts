@@ -1,6 +1,6 @@
 import {exec} from '../utils/exec';
 import {GitTag, MergeCommitInfo, Package} from '../types';
-import {dedup, filterExistingPackages} from '.';
+import {dedup, destructureVersionTag, filterExistingPackages} from '.';
 import {MERGE_PULL_COMMIT_REGEX} from '../constants';
 
 export const setupUser = async () => {
@@ -46,14 +46,42 @@ export const getChangePackages = async (): Promise<Package[]> => {
 
 export const getSortedGitTags = async (): Promise<GitTag[]> => {
   return (await exec(`git tag --list`)).split('\n').sort((a, b) => {
-    const nameA = a.toUpperCase();
-    const nameB = b.toUpperCase();
+    const destructuredA = destructureVersionTag(a);
+    const destructuredB = destructureVersionTag(b);
 
-    if (nameA > nameB) {
+    if (!destructuredA && !destructuredB) {
+      return 0;
+    }
+
+    if (!destructuredA) {
+      return 1;
+    }
+
+    if (!destructuredB) {
       return -1;
     }
-    if (nameA < nameB) {
+
+    const {packageName: packageName1, major: major1, minor: minor1, patch: patch1} = destructuredA;
+    const {packageName: packageName2, major: major2, minor: minor2, patch: patch2} = destructuredB;
+
+    if (packageName1 > packageName2) {
+      return -1;
+    }
+
+    if (packageName1 < packageName2) {
       return 1;
+    }
+
+    if (major1 !== major2) {
+      return +major1 < +major2 ? 1 : -1;
+    }
+
+    if (minor1 !== minor2) {
+      return +minor1 < +minor2 ? 1 : -1;
+    }
+
+    if (patch1 !== patch2) {
+      return +patch1 < +patch2 ? 1 : -1;
     }
 
     return 0;

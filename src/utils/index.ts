@@ -7,6 +7,21 @@ import {getPullRequest} from './github';
 import {context} from '../context';
 import {MD_COMMENT_REGEX, MD_RELEASE_NOTE_SECTION_REGEX} from '../constants';
 
+export const destructureVersionTag = (tag: string) => {
+  const match = tag.match(/^(.+)-(\d+)\.(\d+)\.(\d+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    packageName: match[1],
+    major: match[2],
+    minor: match[3],
+    patch: match[4],
+  };
+};
+
 export const dedup = <T>(collection: T[]) => {
   return [...new Set(collection)];
 };
