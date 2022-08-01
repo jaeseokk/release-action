@@ -2,6 +2,16 @@ import axios from 'axios';
 import {RELEASE_URLS} from '../constants';
 import {BumpedPackageInfo} from '../types';
 
+export const slackifyMarkdown = (content: string) => {
+  const slackifiedContent = content
+    .split('\n')
+    .map((line) => line.replace(/^( *)(\*)( )/, '$1•$2'))
+    .join('\n')
+    .replace(/\[([\w\s\d]+)\]\((https?:\/\/[\w\d./?=#]+)\)/g, '<$2|$1>');
+
+  return slackifiedContent;
+};
+
 export const getNotifyReleaseMessageBlock = (
   channelName: string,
   packageInfoList: BumpedPackageInfo[],
@@ -46,7 +56,7 @@ export const getNotifyReleaseMessageBlock = (
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Release Note*\n\n${releaseNote}`,
+          text: `*Release Note*\n\n${slackifyMarkdown(releaseNote)}`,
         },
       },
     ],
