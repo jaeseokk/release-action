@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import {context} from './context';
-import {bumpPackages, getMinorPartOfVersion, getReleaseNote} from './utils';
+import {bumpPackages, getMinorPartOfVersion, getReleaseNoteInfo} from './utils';
 import {
   fetchTags,
   getChangePackages,
@@ -57,16 +57,29 @@ const run = async () => {
 
   await pushCommitWithTags();
 
-  const releaseNote = await getReleaseNote(lastCommitMessage);
+  const {releaseNote, authors = []} = (await getReleaseNoteInfo(lastCommitMessage)) || {};
 
   console.log(`Release Note: ${releaseNote}`);
 
-  bumpedPackageInfoList.forEach((packageInfo) => {
-    createRelease({tagName: packageInfo.tag, releaseNote});
-  });
+  const bumpedPackageInfoWithReleaseUrlList = await Promise.all(
+    bumpedPackageInfoList.map(async (packageInfo) => {
+      const release = await createRelease({tagName: packageInfo.tag, releaseNote});
+
+      return {
+        ...packageInfo,
+        releaseUrl: release.data.html_url,
+      };
+    }),
+  );
 
   if (slackToken && slackChannel) {
-    await notifyRelease(slackToken, slackChannel, bumpedPackageInfoList, releaseNote || '');
+    await notifyRelease(
+      slackToken,
+      slackChannel,
+      bumpedPackageInfoWithReleaseUrlList,
+      authors,
+      releaseNote || '',
+    );
   }
 
   core.setOutput('released', 'true');

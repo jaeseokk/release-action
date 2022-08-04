@@ -12,3 +12,7 @@ export interface BumpedPackageInfo {
   version: string;
   tag: string;
 }
+
+export interface BumpedPackageInfoWithReleaseUrl extends BumpedPackageInfo {
+  releaseUrl: string;
+}

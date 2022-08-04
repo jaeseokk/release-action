@@ -3,7 +3,7 @@ import fs from 'fs';
 import {BumpedPackageInfo, GitTag, Package} from '../types';
 import {commitVersion, getMergeCommitInfo, tagVersion} from './git';
 import {exec} from '@actions/exec';
-import {getPullRequest} from './github';
+import {getPullRequest, getPullRequestCommits} from './github';
 import {context} from '../context';
 import {MD_COMMENT_REGEX, MD_RELEASE_NOTE_SECTION_REGEX} from '../constants';
 
@@ -115,7 +115,7 @@ export const extractReleaseNoteFromPullRequestBody = (pullRequestBody: string) =
   return releaseNote;
 };
 
-export const getReleaseNote = async (lastCommitMessage: string) => {
+export const getReleaseNoteInfo = async (lastCommitMessage: string) => {
   /**
    * 1. check merge commit
    * 2.1 if no, return null
@@ -138,7 +138,14 @@ export const getReleaseNote = async (lastCommitMessage: string) => {
 
   const pullNumber = mergeCommitInfo.pullNumber;
   const pullRequestInfo = await getPullRequest({pullNumber});
+  const authors = (await getPullRequestCommits({pullNumber})).data
+    .filter((commit) => !!commit.author?.login)
+    .map((commit) => commit.author?.login || '');
   const releaseNote = extractReleaseNoteFromPullRequestBody(pullRequestInfo.data.body || '');
 
-  return releaseNote || pullRequestInfo.data.title;
+  return {
+    pullNumber,
+    authors,
+    releaseNote: releaseNote || pullRequestInfo.data.title,
+  };
 };

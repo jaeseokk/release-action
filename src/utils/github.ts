@@ -13,12 +13,14 @@ export const createRelease = async ({
     throw 'context error';
   }
 
-  await context.octokit.repos.createRelease({
+  const releaseResult = await context.octokit.repos.createRelease({
     name: tagName,
     tag_name: tagName,
     body: releaseNote || '',
     ...github.context.repo,
   });
+
+  return releaseResult;
 };
 
 export const getPullRequest = async ({pullNumber}: {pullNumber: number}) => {
@@ -27,6 +29,17 @@ export const getPullRequest = async ({pullNumber}: {pullNumber: number}) => {
   }
 
   return await context.octokit.pulls.get({
+    pull_number: pullNumber,
+    ...github.context.repo,
+  });
+};
+
+export const getPullRequestCommits = async ({pullNumber}: {pullNumber: number}) => {
+  if (!context.octokit) {
+    throw 'context error';
+  }
+
+  return await context.octokit.pulls.listCommits({
     pull_number: pullNumber,
     ...github.context.repo,
   });

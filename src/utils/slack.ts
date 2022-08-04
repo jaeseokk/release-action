@@ -1,6 +1,6 @@
 import axios from 'axios';
 import {RELEASE_URLS} from '../constants';
-import {BumpedPackageInfo} from '../types';
+import {BumpedPackageInfoWithReleaseUrl} from '../types';
 
 export const slackifyMarkdown = (content: string) => {
   const slackifiedContent = content
@@ -14,7 +14,8 @@ export const slackifyMarkdown = (content: string) => {
 
 export const getNotifyReleaseMessageBlock = (
   channelName: string,
-  packageInfoList: BumpedPackageInfo[],
+  packageInfoList: BumpedPackageInfoWithReleaseUrl[],
+  authors: string[],
   releaseNote: string,
 ) => {
   return {
@@ -31,8 +32,8 @@ export const getNotifyReleaseMessageBlock = (
       ...packageInfoList.map((packageInfo) => ({
         type: 'section',
         text: {
-          type: 'plain_text',
-          text: packageInfo.tag,
+          type: 'mrkdwn',
+          text: `<${packageInfo.releaseUrl}|${packageInfo.tag}>`,
         },
         ...(RELEASE_URLS[packageInfo.packageName]
           ? {
@@ -59,6 +60,13 @@ export const getNotifyReleaseMessageBlock = (
           text: `*Release Note*\n\n${slackifyMarkdown(releaseNote)}`,
         },
       },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `> 👍 thx ${authors.map((author) => `@${author}`).join(' ')}`,
+        },
+      },
     ],
   };
 };
@@ -66,10 +74,16 @@ export const getNotifyReleaseMessageBlock = (
 export const notifyRelease = async (
   slackToken: string,
   channelName: string,
-  changedPackages: BumpedPackageInfo[],
+  changedPackages: BumpedPackageInfoWithReleaseUrl[],
+  authors: string[],
   releaseNote: string,
 ) => {
-  const messageBlock = getNotifyReleaseMessageBlock(channelName, changedPackages, releaseNote);
+  const messageBlock = getNotifyReleaseMessageBlock(
+    channelName,
+    changedPackages,
+    authors,
+    releaseNote,
+  );
 
   await axios.post('https://slack.com/api/chat.postMessage', messageBlock, {
     headers: {
