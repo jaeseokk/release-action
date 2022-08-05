@@ -41,7 +41,7 @@ export const getNotifyReleaseMessageBlock = (
                 type: 'button',
                 text: {
                   type: 'plain_text',
-                  text: 'Link',
+                  text: 'Visit',
                 },
                 value: packageInfo.tag,
                 url: RELEASE_URLS[packageInfo.packageName],
