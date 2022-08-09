@@ -7,7 +7,7 @@ export const slackifyMarkdown = (content: string) => {
     .split('\n')
     .map((line) => line.replace(/^( *)(\*)( )/, '$1•$2'))
     .join('\n')
-    .replace(/\[([\w\s\d]+)\]\((https?:\/\/[\w\d./?=#]+)\)/g, '<$2|$1>');
+    .replace(/\[([\w\s\d(ㄱ-ㅎ|ㅏ-ㅣ|가-힣)]+)\]\((https?:\/\/[\w\d./?=#]+)\)/g, '<$2|$1>');
 
   return slackifiedContent;
 };
