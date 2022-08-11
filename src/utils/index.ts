@@ -138,9 +138,11 @@ export const getReleaseNoteInfo = async (lastCommitMessage: string) => {
 
   const pullNumber = mergeCommitInfo.pullNumber;
   const pullRequestInfo = await getPullRequest({pullNumber});
-  const authors = (await getPullRequestCommits({pullNumber})).data
-    .filter((commit) => !!commit.author?.login)
-    .map((commit) => commit.author?.login || '');
+  const authors = dedup(
+    (await getPullRequestCommits({pullNumber})).data
+      .filter((commit) => !!commit.author?.login)
+      .map((commit) => commit.author?.login || ''),
+  );
   const releaseNote = extractReleaseNoteFromPullRequestBody(pullRequestInfo.data.body || '');
 
   return {
