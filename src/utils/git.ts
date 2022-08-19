@@ -1,6 +1,10 @@
+import path from 'path';
+import fs from 'fs';
+import globby from 'globby';
+
 import {exec} from '../utils/exec';
-import {GitTag, MergeCommitInfo, Package} from '../types';
-import {dedup, destructureVersionTag, filterExistingPackages} from '.';
+import {GitTag, MergeCommitInfo, Package, PackageInfo} from '../types';
+import {dedup, destructureVersionTag, filterExistingPackages, getRootPackageJson} from '.';
 import {MERGE_PULL_COMMIT_REGEX} from '../constants';
 
 export const setupUser = async () => {
@@ -42,6 +46,50 @@ export const getChangePackages = async (): Promise<Package[]> => {
   const existingChangedPackages = await filterExistingPackages(changedPackages);
 
   return existingChangedPackages;
+};
+
+export const getPackageInfos = async (): Promise<PackageInfo[]> => {
+  const rootPackageJson = await getRootPackageJson();
+  const packageGlobs = Array.isArray(rootPackageJson.workspaces)
+    ? rootPackageJson.workspaces
+    : !!rootPackageJson.workspaces.packages
+    ? rootPackageJson.workspaces.packages
+    : [];
+  const directories = await globby(packageGlobs, {
+    onlyDirectories: true,
+    expandDirectories: false,
+    ignore: ['**/node_modules'],
+  });
+  const result = directories
+    .map((dir) => {
+      try {
+        const isPackage = fs.existsSync(path.join(dir, 'package.json'));
+        const name = dir.match(/[^/]+$/)?.[0] || '';
+
+        if (isPackage && name) {
+          return {dir, name};
+        } else {
+          return null;
+        }
+      } catch (e) {
+        return null;
+      }
+    })
+    .filter((v) => v);
+
+  return result as PackageInfo[];
+};
+
+export const getChangedPackageInfos = async (): Promise<PackageInfo[]> => {
+  const packageInfos = await getPackageInfos();
+  const lastTag = await exec(`git describe --tags --abbrev=0`);
+  const changedFiles = (await exec(`git diff ${lastTag.trim()} HEAD --name-only`)).split('\n');
+
+  const changedPackageInfos = packageInfos.filter((packageInfo) =>
+    changedFiles.some((file) => file.indexOf(packageInfo.dir) === 0),
+  );
+
+  return changedPackageInfos;
 };
 
 export const getSortedGitTags = async (): Promise<GitTag[]> => {
@@ -88,13 +136,13 @@ export const getSortedGitTags = async (): Promise<GitTag[]> => {
   });
 };
 
-export const commitVersion = async (packageName: string, version: string) => {
-  await exec(`git add packages/*/package.json`);
-  await exec(`git commit -m "${packageName}-${version}"`);
+export const commitVersion = async (packageInfo: PackageInfo, version: string) => {
+  await exec(`git add **/package.json`);
+  await exec(`git commit -m "${packageInfo.name}-${version}"`);
 };
 
-export const tagVersion = async (packageName: string, version: string) => {
-  await exec(`git tag "${packageName}-${version}"`);
+export const tagVersion = async (packageInfo: PackageInfo, version: string) => {
+  await exec(`git tag "${packageInfo.name}-${version}"`);
 };
 
 export const pushCommitWithTags = async () => {

@@ -25,7 +25,8 @@
     "@actions/core": "^1.2.5",
     "@actions/exec": "^1.0.4",
     "@actions/github": "^4.0.0",
-    "axios": "^0.27.2"
+    "axios": "^0.27.2",
+    "globby": "^11.1.0"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^4.23.0",
