@@ -13,5 +13,6 @@ export const RELEASE_URLS: Record<string, string> = {
   management: 'https://management.howbuild.com',
   blog: 'https://blog.howbuild.com',
   architect: 'https://architect.howbuild.com',
+  marketplace: 'https://marketplace.howbuild.com',
   shared: 'https://ui.preview.howbuild.com',
 };

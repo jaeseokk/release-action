@@ -3,7 +3,7 @@ import {context} from './context';
 import {bumpPackages, getMinorPartOfVersion, getReleaseNoteInfo} from './utils';
 import {
   fetchTags,
-  getChangePackages,
+  getChangedPackageInfos,
   getSortedGitTags,
   pushCommitWithTags,
   setupRemote,
@@ -41,13 +41,13 @@ const run = async () => {
   await setupRemote(githubToken, githubRepositoryPath);
   await fetchTags();
 
-  const changedPackages = await getChangePackages();
+  const changedPackageInfos = await getChangedPackageInfos();
 
-  console.log(`Changed pacakges: ${changedPackages}`);
+  console.log(`Changed pacakges: ${JSON.stringify(changedPackageInfos)}`);
 
   const gitTags = await getSortedGitTags();
   const minor = getMinorPartOfVersion();
-  const bumpedPackageInfoList = await bumpPackages(changedPackages, gitTags, minor);
+  const bumpedPackageInfoList = await bumpPackages(changedPackageInfos, gitTags, minor);
 
   console.log(`New tags: ${bumpedPackageInfoList.map((packageInfo) => packageInfo.tag)}`);
 

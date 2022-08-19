@@ -2,6 +2,11 @@ export type GitTag = string;
 
 export type Package = string;
 
+export interface PackageInfo {
+  dir: string;
+  name: string;
+}
+
 export interface MergeCommitInfo {
   commitMessage: string;
   pullNumber: number;

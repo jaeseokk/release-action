@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import {BumpedPackageInfo, GitTag, Package} from '../types';
+import {BumpedPackageInfo, GitTag, Package, PackageInfo} from '../types';
 import {commitVersion, getMergeCommitInfo, tagVersion} from './git';
 import {exec} from '@actions/exec';
 import {getPullRequest, getPullRequestCommits} from './github';
@@ -43,8 +43,18 @@ export const getMinorPartOfVersion = (): string => {
   return `${year}${month}${date}`;
 };
 
-export const findPackageJson = (packageName: Package) => {
-  const packageJsonPath = path.join(process.cwd(), 'packages', packageName, 'package.json');
+export const getRootPackageJson = () => {
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+
+  if (!fs.existsSync(packageJsonPath)) {
+    throw new Error('Could not find root package.json');
+  }
+
+  return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+};
+
+export const findPackageJson = (packageInfo: PackageInfo) => {
+  const packageJsonPath = path.join(process.cwd(), packageInfo.dir, 'package.json');
 
   if (!fs.existsSync(packageJsonPath)) {
     throw new Error('Could not find package.json');
@@ -53,9 +63,9 @@ export const findPackageJson = (packageName: Package) => {
   return JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 };
 
-export const updateVersionOfPackageJson = async (packageName: string, version: string) => {
-  const packageJsonPath = path.join(process.cwd(), 'packages', packageName, 'package.json');
-  const packageJson = findPackageJson(packageName);
+export const updateVersionOfPackageJson = async (packageInfo: PackageInfo, version: string) => {
+  const packageJsonPath = path.join(process.cwd(), packageInfo.dir, 'package.json');
+  const packageJson = findPackageJson(packageInfo);
 
   const nextPakcageJson = {
     ...packageJson,
@@ -68,29 +78,29 @@ export const updateVersionOfPackageJson = async (packageName: string, version: s
 };
 
 export const bumpPackages = async (
-  changedPackages: Package[],
+  changedPackages: PackageInfo[],
   gitTags: GitTag[],
   minor: string,
 ): Promise<BumpedPackageInfo[]> => {
   const bumpedPackageInfoList = [];
 
-  for (const packageName of changedPackages) {
-    const prevVersion = gitTags.find((tag) => tag.indexOf(`${packageName}-1.${minor}`) === 0);
+  for (const packageInfo of changedPackages) {
+    const prevVersion = gitTags.find((tag) => tag.indexOf(`${packageInfo.name}-1.${minor}`) === 0);
     const patchPartOfPrevVersion = prevVersion ? prevVersion.split('.')[2] : null;
     const nextPatch =
       patchPartOfPrevVersion && !isNaN(parseInt(patchPartOfPrevVersion))
         ? parseInt(patchPartOfPrevVersion) + 1
         : 0;
-    const prefix = `${packageName}-`;
+    const prefix = `${packageInfo.name}-`;
     const version = `1.${minor}.${nextPatch}`;
     const versionWithPackage = `${prefix}${version}`;
 
-    await updateVersionOfPackageJson(packageName, version);
-    await commitVersion(packageName, version);
-    await tagVersion(packageName, version);
+    await updateVersionOfPackageJson(packageInfo, version);
+    await commitVersion(packageInfo, version);
+    await tagVersion(packageInfo, version);
 
     bumpedPackageInfoList.push({
-      packageName,
+      packageName: packageInfo.name,
       version,
       tag: versionWithPackage,
     });
