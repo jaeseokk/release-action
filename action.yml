@@ -24,6 +24,13 @@ inputs:
   slackChannel:
     description: >
       Slack channel
+  slackMessageTitle:
+    description: >
+      Slack message title
+  releaseUrls:
+    description: >
+      A JSON map that the release urls.
+      (e.g. {"www": "https://www.example.com", "admin": "https://admin.example.com"})
 outputs:
   released:
     description: >

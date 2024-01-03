@@ -19,6 +19,8 @@ const run = async () => {
   const slackToken = core.getInput('slackToken');
   const lastCommitMessage = core.getInput('lastCommitMessage', {required: true});
   const slackChannel = core.getInput('slackChannel');
+  const slackMessageTitle = core.getInput('slackMessageTitle');
+  const releaseUrlMap = JSON.parse(core.getInput('releaseUrls'));
 
   if (!githubRepositoryPath) {
     core.setFailed('Unavailable github repo path.');
@@ -73,13 +75,15 @@ const run = async () => {
   );
 
   if (slackToken && slackChannel) {
-    await notifyRelease(
+    await notifyRelease({
       slackToken,
-      slackChannel,
-      bumpedPackageInfoWithReleaseUrlList,
+      channelName: slackChannel,
+      changedPackages: bumpedPackageInfoWithReleaseUrlList,
       authors,
-      releaseNote || '',
-    );
+      title: slackMessageTitle || undefined,
+      releaseNote: releaseNote || '',
+      releaseUrlMap: releaseUrlMap || {},
+    });
   }
 
   core.setOutput('released', 'true');

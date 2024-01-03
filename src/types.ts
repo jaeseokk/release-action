@@ -21,3 +21,7 @@ export interface BumpedPackageInfo {
 export interface BumpedPackageInfoWithReleaseUrl extends BumpedPackageInfo {
   releaseUrl: string;
 }
+
+export interface ReleaseUrlMap {
+  [packageName: string]: string;
+}
